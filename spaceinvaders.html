@@ -5,20 +5,42 @@
             p.highlight {
                 color: red;
             }
+            .scoretitle{
+                font: bold 30px sans-serif
+            }    
             svg {
                 background-color: rgb(41, 41, 36);
             }
+            .score{
+                font: bold 30px sans-serif
+            }
+            .outcome {
+                    font: bold 20px sans-serif;
+                    fill: red;
+                }
+            .restart{
+                    font: bold 30px sans-serif;
+                }
+            
         </style>
         <script src="./dist/spaceinvaders.js"></script>
     </head>
     <body>
         <h1>Space Invaders</h1>
         <svg id="canvas" width="600" height="600">
+            
+            <style>
+
+            </style> 
             <g id="ship" transform="translate(300,500)">
                 <polygon points="-15,20 15,20 0,-20"
                             style="fill:lightblue">
                 </polygon>
               </g>
+                
+            <line id= "border" x1 = "0" y1 = "450" x2 = "600" y2 = "450" style="stroke:rgb(255,0,0);stroke-width:2" />
+            <text x = "20" y = "30" class = "scoretitle">Score:</text>
+            <text id= "score" x = "120" y = "30.5" class = "score">0 </text>
             </svg>
     </body>
 </html>
