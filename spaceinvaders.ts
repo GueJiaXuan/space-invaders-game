@@ -1,3 +1,6 @@
+//Coding style is heavily inspired from Tim's Asteriods: https://tgdwyer.github.io/asteroids/ 
+
+
 import { interval, fromEvent, from, zip, timer,  } from 'rxjs'
 import { map, scan, filter, merge, take, concat, takeUntil, skipLast} from 'rxjs/operators'
 
@@ -6,6 +9,7 @@ type Event = 'keyup' | 'keydown'
 type Key = 'ArrowLeft' | 'ArrowRight' | 'ArrowUp'
 type ViewType = 'ship' | 'bullet' | 'alien'
 
+//constants used in spaceInvaders
 const
 Constants = new class {
   readonly CanvasWidth = 600;
@@ -31,17 +35,18 @@ function spaceinvaders() {
     class Shoot {constructor(){}}
     class Tick {constructor(){}}
 
-
+    // function is keeping track of keyboard events (key presses)
     const keyObservable = <T>(e: Event, k: Key, result:() => T) =>
     fromEvent<KeyboardEvent>(document, e)
       .pipe(
         filter(({code})=>code === k),
         map(result))
-  
-  const
-      startLeft = keyObservable('keydown','ArrowLeft', () => new Move(-20)),
-      startRight = keyObservable('keydown', 'ArrowRight', () => new Move(20)),
-      shoot = keyObservable('keydown', 'ArrowUp', ()=> new Shoot())
+        
+    // what different key strokes will perform 
+    const
+    startLeft = keyObservable('keydown','ArrowLeft', () => new Move(-20)),
+    startRight = keyObservable('keydown', 'ArrowRight', () => new Move(20)),
+    shoot = keyObservable('keydown', 'ArrowUp', ()=> new Shoot())
 
     // ship/bullet/alien
     type Body = Readonly<{
@@ -70,7 +75,7 @@ function spaceinvaders() {
       }>
 
 
-
+  // create ship bullet object
   const createBullet = (pos: Vec) => (id:String) => <Body>
     {
       id: id,
@@ -82,7 +87,8 @@ function spaceinvaders() {
       color: "red"
  
     }
-
+  
+  // create alien bullet object
   const createAlienBullet = (pos: Vec) => (id: String) => <Body>
     {
       id: id,
@@ -95,6 +101,8 @@ function spaceinvaders() {
       color: "green"
     }
 
+
+  // create alien object
   const createAlien = (pos: Vec) => (id:String) => <Body>
     {
       id: id,
@@ -107,6 +115,7 @@ function spaceinvaders() {
     }
   
   
+  // create ship object
   function createShip(pos: Vec): Body{
     // create ship at pos
       return{
@@ -118,11 +127,12 @@ function spaceinvaders() {
     }
   
 
-
+  // create starting aliens 
   const createStartAliens = [...Array(Constants.StartAliens)].map((_,i) => 
   createAlien(new Vec((i%6 + 1)*Constants.alienDistX + 15,
    (Math.floor(i/6) + 1)*Constants.alienDistY + 15))("alien"+i.toString()))
   
+  // declare initial state
   const initialState: State = {
     time: 0,
     ship: createShip(new Vec(300,500)),
@@ -135,6 +145,7 @@ function spaceinvaders() {
     score: 0
   }
 
+  //checks whether objects are out of canvas range and update position accordingly
   const updatePos = ({x,y}:Vec) => { 
     const checkBound = (v:number) => 
       v < 0 ? 15: 
@@ -145,22 +156,26 @@ function spaceinvaders() {
     return new Vec(checkBound(x),checkBound(y))
   }
 
+  // choose a random alien to fire a bullet
   const chooseRandomAlienPos = (s:State) => {
     const randomAlien  = s.aliens[Math.floor(Math.random()*s.aliens.length)]
     return new Vec ( randomAlien.pos.x + 15, randomAlien.pos.y + 30)
 
   }
 
+  // update ship bullet movement
   const moveBullet = (b: Body) => <Body>{
     ...b,
     pos: b.pos.add(new Vec(0,-1))
   }
-
+  
+  // update alien bullet movement 
   const moveAlienBullet = (b: Body) => <Body>{
     ...b,
     pos: b.pos.add(new Vec(0,0.5))
   }
 
+  //update alien movement 
   const moveAliens = (b:Body, n1:number, n2:number) => <Body>{
     ...b,
     pos: b.pos.add(new Vec(n1, n2))
@@ -168,8 +183,8 @@ function spaceinvaders() {
 
   const handleCollisions = (s:State) => {
     const
-    shipBulletsCollided = ([a,b]:[Body,Body]) => a.pos.sub(b.pos).len() < a.hitres + b.hitres,
     //to check whether alien bullet hit ship
+    shipBulletsCollided = ([a,b]:[Body,Body]) => a.pos.sub(b.pos).len() < a.hitres + b.hitres,
     shipCollided = s.alienBullet.filter(r => shipBulletsCollided([s.ship,r])).length > 0,
     
     //to check whether aliens pass the border
@@ -182,6 +197,8 @@ function spaceinvaders() {
     collidedBulletsAndAliens = allBulletsAndAliens.filter(bulletAlienCollision),
     collidedBullets = collidedBulletsAndAliens.map(([b,_]) => b),
     collidedAliens = collidedBulletsAndAliens.map(([_,a]) => a),
+
+    //function to remove elements from a list
     cut = except((a:Body)=>(b:Body)=>a.id === b.id)
     
     return <State>{
@@ -195,7 +212,7 @@ function spaceinvaders() {
   }
 }
 
-
+  // using tick value to determine fixed x-axis movement of alien 
   function getAlienDirectionX(elapsed: number): number{
     if (elapsed % 7000 == 1000)
       return 50
@@ -209,6 +226,7 @@ function spaceinvaders() {
       return 0
   }
 
+  // using tick value to determine fixed y-axis movement of alien 
   function getAlienDirectionY(elapsed: number): number{
     if (elapsed % 7000 == 2000)
       return 50
@@ -220,16 +238,14 @@ function spaceinvaders() {
       return 0
   }
   
-
-  
-
+  // movement of all objects on canvas except ship movement
   const tick = (s:State, elapsed: number ) => {
-    //for bullet tick
+    //for bullet tick, remove bullets when out of range
     const outOfRange = (b:Body) => b.pos.x < 0 || b.pos.x > Constants.CanvasWidth || b.pos.y < 0 || b.pos.y > Constants.CanvasHeight,
     outOfRangeBullets:Body[] = s.bullets.filter(outOfRange),
     validBullets = s.bullets.filter(not(outOfRange));
     
-    //for alien bullet tick
+    //for alien bullet tick, remove bullets when out of range
     const
     outOfRangeAlienBullets:Body[] = s.alienBullet.filter(outOfRange),
     validAlienBullets = s.alienBullet.filter(not(outOfRange));
@@ -246,7 +262,7 @@ function spaceinvaders() {
   }
   
 
-  
+  // movement of ship object and fire bullets based on user input
   const reduceState = (s: State, e: Move|Shoot|Tick) => 
     e instanceof Move ? {...s,
       ship: {...s.ship,  pos:updatePos(s.ship.pos.add(new Vec(e.direction, 0)))},
@@ -261,6 +277,7 @@ function spaceinvaders() {
     } :
     tick(s, 1)
     
+  //subsribe to game key presses
   const subscription = interval(10).pipe(
     // stream keyboard events and accumulate in reduceState
     merge(startLeft, startRight, shoot),
@@ -268,11 +285,15 @@ function spaceinvaders() {
     // subscribe updated state to updateView
     .subscribe(updateView);
 
+  //update all elements in canvas
   function updateView(s: State) {
     const svg = document.getElementById("canvas")!
     const ship = document.getElementById("ship")!
-      attr(ship,{transform:`translate(${s.ship.pos.x}, ${s.ship.pos.y})`})
-        
+
+    //ship movement updated here
+    attr(ship,{transform:`translate(${s.ship.pos.x}, ${s.ship.pos.y})`})
+    
+    //function to create bullets or move bullets
     const updateBullets = (b:Body) => {
       function createSvgBullet() {
         const v = document.createElementNS(svg.namespaceURI, b.shape)!;
@@ -285,9 +306,11 @@ function spaceinvaders() {
       attr(v,{cx:b.pos.x,cy:b.pos.y});
     };
 
+    // ship bullets and alien bullets updated here
     s.bullets.forEach(updateBullets);
     s.alienBullet.forEach(updateBullets)       
-
+    
+    //function to create or move aliens
     const updateAliens = (b:Body) => {
       function createSvgAlien() {
         const v = document.createElementNS(svg.namespaceURI, b.shape)!;
@@ -299,8 +322,11 @@ function spaceinvaders() {
       const v = document.getElementById(b.id) || createSvgAlien();
       attr(v,{x:b.pos.x,y:b.pos.y});
     };
+
+    // alien movement updated here
     s.aliens.forEach(updateAliens);
-        
+       
+    // remove all objects in exitObjects array and removing it from canvas
     s.exitObjects.map(o=>document.getElementById(o.id))
       .filter(isNotNullOrUndefined)
       .forEach(v=>{
@@ -347,7 +373,7 @@ function spaceinvaders() {
                   })
       svg.appendChild(outcome);
 
-      // checks for any key press to call spaceInvaders function again (restart game)
+      // any keypress will call spaceinvaders() again, which essntially restarts game
       window.onkeydown = function(e: KeyboardEvent) {
       svg.removeChild(msg);
       svg.removeChild(outcome);
@@ -373,7 +399,7 @@ if (typeof window != 'undefined')
 
 
 // All Utility Functions used in this game, taken from Tim's Asteroid Codes with some small modifications
-//An Immutable Vector class, in charge of moment s
+//An Immutable Vector class, in charge of movements 
 class Vec {
   constructor(public readonly x: number = 0, public readonly y: number = 0) {}
   add = (b:Vec) => new Vec(this.x + b.x, this.y + b.y)
